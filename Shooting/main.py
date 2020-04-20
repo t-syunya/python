@@ -1,7 +1,9 @@
 # -*-coding:utf-8-*-
 import pygame
 from pygame.locals import *
-import sys, random
+import sys
+import random
+import math
 
 SCR = Rect(0, 0, 300, 500)
 
@@ -15,28 +17,27 @@ class Main:
         pygame.display.set_caption("I'ts a Shooting Game")
         self.screen = pygame.display.set_mode(SCR.size)
         self.clock = pygame.time.Clock()
-        self.enemy_prob = 60
+        self.enemy_prob = 120
 
         # 画像読み込み、スプライト管理
         self.bg = pygame.image.load("Textures/background.jpg").convert_alpha()
         self.bg_rect = self.bg.get_rect()
         Player.image = pygame.image.load("Textures/player.png")
         Enemy1.image = pygame.image.load("Textures/enemy1.png")
-        Bullet1.image = pygame.image.load("Textures/bullet1.png")
+        EnemyBullet1.image = pygame.image.load("Textures/bullet1.png")
         self.all_sprite = pygame.sprite.RenderUpdates()
-        self.player = pygame.sprite.Group()
         self.enemy1 = pygame.sprite.Group()
         self.bullet1 = pygame.sprite.Group()
-        Player.containers = self.all_sprite, self.player
+        Player.containers = self.all_sprite
         Enemy1.containers = self.all_sprite, self.enemy1
-        Bullet1.containers = self.all_sprite, self.bullet1
+        EnemyBullet1.containers = self.all_sprite, self.bullet1
 
         # BGMを再生
         pygame.mixer.music.load("Audio/bgm_maoudamashii_orchestra15.ogg")
         pygame.mixer.music.play(-1)
 
         # ループ開始
-        Player()
+        self.player = Player()
         self.main()
 
     def main(self):
@@ -71,7 +72,9 @@ class Main:
                 sys.exit()
 
     def collision_detection(self):
-        x = 1
+        player_bullet_collision = pygame.sprite.spritecollide(self.player, self.bullet1, True)
+        if player_bullet_collision:
+            pygame.mixer.music.stop()
 
 
 class Player(pygame.sprite.Sprite):
@@ -101,19 +104,41 @@ class Enemy1(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self, self.containers)
         self.rect = self.image.get_rect()
-        self.rect.center = (150, 0)  # プレイヤーは画面の一番下からスタート
-        self.speed = 5
+        self.rect.left = random.randrange(SCR.width / self.rect.width) * self.rect.width
+        self.rect.bottom = SCR.top
+        self.speed = 1
+        self.shoot_timer = 0
 
     def update(self):
         self.rect.move_ip(0, self.speed)
+        self.shoot_timer += 1
         if self.rect.top > SCR.height:
             self.kill()
+        if self.shoot_timer == 60:
+            self.shoot_timer = 0
+            EnemyBullet1(self.rect.center)
 
 
-class Bullet1(pygame.sprite.Sprite):
-    def __init__(self):
+class EnemyBullet1(pygame.sprite.Sprite):
+    def __init__(self, pos):
         pygame.sprite.Sprite.__init__(self, self.containers)
         self.rect = self.image.get_rect()
+        self.rect.center = pos
+        self.speed = 3
+
+    def update(self):
+        self.rect.move_ip(0, self.speed)
+        self.killer()
+
+    def killer(self):
+        if self.rect.top > SCR.height:
+            self.kill()
+        if self.rect.bottom < 0:
+            self.kill()
+        if self.rect.left > SCR.width:
+            self.kill()
+        if self.rect.right < 0:
+            self.kill()
 
 
 if __name__ == '__main__':
